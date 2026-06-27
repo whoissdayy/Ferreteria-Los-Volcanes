@@ -59,7 +59,18 @@ export function Header() {
             </a>
           ))}
         </nav>
-        <div className="hidden items-center lg:flex">
+        <div className="hidden items-center gap-4 lg:flex">
+          {/* botón con relleno (no link de texto plano como el resto del nav): el catálogo es
+              una acción distinta ("descarga/abre un PDF"), no una sección de la misma página,
+              así que se distingue visualmente del resto de los enlaces de navegación */}
+          <a
+            href="/catalogo.pdf"
+            target="_blank"
+            rel="noreferrer"
+            className="whitespace-nowrap rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-background transition-opacity hover:opacity-90"
+          >
+            Catálogo
+          </a>
           <ThemeToggle />
         </div>
         <div className="flex items-center gap-3 lg:hidden">
@@ -87,6 +98,15 @@ export function Header() {
               {link.label}
             </a>
           ))}
+          <a
+            href="/catalogo.pdf"
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => setMobileOpen(false)}
+            className="mt-3 w-fit rounded-full bg-accent px-4 py-2 text-base font-semibold text-background transition-opacity hover:opacity-90"
+          >
+            Catálogo
+          </a>
         </nav>
       )}
     </motion.header>
