@@ -1,0 +1,32 @@
+<svg viewBox="0 0 600 500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="600" height="500" fill="#3f3f46"/>
+
+  <!-- manojo de varillas de fierro (rebar) -->
+  <g stroke="#d4d4d8" stroke-width="14" stroke-linecap="round">
+    <line x1="160" y1="280" x2="160" y2="120" />
+    <line x1="195" y1="290" x2="195" y2="100" />
+    <line x1="230" y1="280" x2="230" y2="120" />
+    <line x1="265" y1="290" x2="265" y2="100" />
+  </g>
+  <g fill="#a1a1aa">
+    <circle cx="160" cy="120" r="9" />
+    <circle cx="195" cy="100" r="9" />
+    <circle cx="230" cy="120" r="9" />
+    <circle cx="265" cy="100" r="9" />
+  </g>
+
+  <!-- viga IPR (perfil I) -->
+  <g transform="translate(330,90)" fill="#e4e4e7">
+    <rect x="0" y="0" width="120" height="22" />
+    <rect x="49" y="0" width="22" height="200" />
+    <rect x="0" y="178" width="120" height="22" />
+  </g>
+
+  <!-- lámina galvanizada corrugada -->
+  <g transform="translate(140,330)" fill="none" stroke="#e4e4e7" stroke-width="8">
+    <path d="M0 40 Q 20 10 40 40 T 80 40 T 120 40 T 160 40 T 200 40 T 240 40 T 280 40 T 320 40" />
+    <path d="M0 70 Q 20 40 40 70 T 80 70 T 120 70 T 160 70 T 200 70 T 240 70 T 280 70 T 320 70" />
+  </g>
+
+  <text x="300" y="455" text-anchor="middle" font-family="Arial, sans-serif" font-size="36" font-weight="700" fill="#fff">Todo en Fierro</text>
+</svg>

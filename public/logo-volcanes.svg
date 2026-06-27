@@ -1,0 +1,27 @@
+<svg width="340" height="220" viewBox="0 0 340 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Logo de Ferretería Los Volcanes">
+  <!-- Recreación estilizada del logo real (no es la imagen original): insignia rectangular
+       azul con borde dorado, texto negro "FERRETERIA" arriba, panel blanco con el ícono de
+       montañas (rojo/amarillo/verde) y un horizonte curvo azul, texto negro "LOS VOLCANES" abajo. -->
+  <rect x="5" y="5" width="330" height="210" rx="16" fill="#1d4f8f" stroke="#f2b705" stroke-width="9" />
+
+  <text x="170" y="44" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="29" font-weight="800" fill="#111111" letter-spacing="1">FERRETERIA</text>
+
+  <!-- panel blanco interior con el emblema -->
+  <rect x="45" y="58" width="250" height="108" rx="10" fill="#ffffff" />
+  <clipPath id="emblemClip">
+    <rect x="45" y="58" width="250" height="108" rx="10" />
+  </clipPath>
+  <g clip-path="url(#emblemClip)">
+    <!-- pico rojo, el más alto, a la izquierda -->
+    <polygon points="58,166 112,78 156,166" fill="#d62828" />
+    <!-- pico amarillo/naranja, mediano, centro-derecha, superpuesto -->
+    <polygon points="128,166 178,96 226,166" fill="#f2b705" />
+    <!-- pico verde, pequeño, a la derecha -->
+    <polygon points="206,166 238,124 270,166" fill="#16a34a" />
+    <!-- horizonte curvo azul bajo los picos -->
+    <path d="M45 162 Q 110 148 170 160 T 295 156 V 166 H 45 Z" fill="#0284c7" opacity="0.85" />
+  </g>
+  <rect x="45" y="58" width="250" height="108" rx="10" fill="none" stroke="#11111122" stroke-width="1" />
+
+  <text x="170" y="200" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="26" font-weight="800" fill="#111111" letter-spacing="1">LOS VOLCANES</text>
+</svg>
