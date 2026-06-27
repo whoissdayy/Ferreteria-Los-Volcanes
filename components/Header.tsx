@@ -40,7 +40,7 @@ export function Header() {
             intercepte el scroll suave del mismo modo en todos los enlaces del header) */}
         <a href="#inicio" aria-label="Ir al inicio" className="flex shrink-0 items-center">
           <Image
-            src="/fotos-originales/logo_ferre.jpg"
+            src="/fotos-originales/logo_ferre.png"
             alt="Logo de Ferretería Los Volcanes"
             width={261}
             height={76}

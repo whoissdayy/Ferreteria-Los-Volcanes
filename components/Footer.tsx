@@ -62,7 +62,7 @@ export function Footer() {
         <div className="footer-col">
           {/* solo el logo, sin el texto "LOS VOLCANES" al lado: el logo ya incluye la marca */}
           <Image
-            src="/fotos-originales/logo_ferre.jpg"
+            src="/fotos-originales/logo_ferre.png"
             alt="Logo de Ferretería Los Volcanes"
             width={261}
             height={76}
@@ -148,7 +148,17 @@ export function Footer() {
       </div>
 
       <div className="border-t border-border px-6 py-4 text-center text-xs text-muted">
-        © {new Date().getFullYear()} Ferretería Los Volcanes. Todos los derechos reservados.
+        {"©"} {new Date().getFullYear()} Ferretería Los Volcanes. Todos los derechos reservados.
+        {" "}&middot;{" "}
+        Creado por{" "}
+        <a
+          href="https://www.instagram.com/whoissdayy/"
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold text-muted underline-offset-2 transition-colors hover:text-foreground hover:underline"
+        >
+          Day
+        </a>
       </div>
     </footer>
   );
