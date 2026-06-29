@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { AnimatePresence, motion } from "motion/react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -42,6 +43,14 @@ export function Gallery() {
   // refs (no estado) para el arrastre con mouse: evitan re-renders en cada movimiento,
   // que sería muy costoso disparados decenas de veces por segundo durante un drag
   const isDraggingRef = useRef(false);
+  // true desde pointerdown hasta pointerup, sin importar si hubo arrastre real — el arrastre
+  // (isDraggingRef) y su setPointerCapture solo se activan si el movimiento supera
+  // DRAG_THRESHOLD; antes de eso se trata como un clic normal para que abra el lightbox
+  // (mismo bug/arreglo que en BrandStrip: capturar el puntero de inmediato en pointerdown
+  // hacía que el navegador redirigiera también el "click" nativo al contenedor, así que un
+  // clic simple sobre una foto nunca llegaba al botón y el lightbox jamás se abría).
+  const isPressingRef = useRef(false);
+  const DRAG_THRESHOLD = 6;
   const dragStartXRef = useRef(0);
   const dragStartScrollRef = useRef(0);
 
@@ -53,6 +62,69 @@ export function Gallery() {
   // tween activo de scrollLeft (flecha o inercia): se guarda para poder cancelarlo si el
   // usuario interrumpe la animación agarrando la franja con el mouse a medio recorrido
   const scrollTweenRef = useRef<gsap.core.Tween | null>(null);
+
+  // controla si las flechas se muestran/habilitan: false cuando ya se llegó al límite de
+  // ese lado, para que no quede una flecha "activa" que al hacer clic no hace nada
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  useEffect(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+
+    function updateScrollLimits() {
+      if (!el) return; // TS no propaga el "if (!el) return" de arriba dentro de esta función anidada
+      const max = el.scrollWidth - el.clientWidth;
+      setCanScrollPrev(el.scrollLeft > 4);
+      setCanScrollNext(el.scrollLeft < max - 4);
+    }
+
+    updateScrollLimits();
+    // "scroll" (no solo resize) porque tanto el drag con mouse como el tween de GSAP de las
+    // flechas/inercia mueven scrollLeft directamente, y eso ya dispara este evento nativo —
+    // no hace falta enganchar la lógica de las flechas ni del drag por separado
+    el.addEventListener("scroll", updateScrollLimits, { passive: true });
+    window.addEventListener("resize", updateScrollLimits);
+    return () => {
+      el.removeEventListener("scroll", updateScrollLimits);
+      window.removeEventListener("resize", updateScrollLimits);
+    };
+  }, []);
+
+  // lightbox: índice de la foto abierta en grande (null = cerrado)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+
+  function closeLightbox() {
+    setLightboxIndex(null);
+  }
+
+  function showPrev() {
+    setLightboxIndex((i) => (i === null ? null : (i - 1 + GALERIA.length) % GALERIA.length));
+  }
+
+  function showNext() {
+    setLightboxIndex((i) => (i === null ? null : (i + 1) % GALERIA.length));
+  }
+
+  // teclado (Escape para cerrar, flechas para navegar) + bloquear el scroll del body
+  // mientras el lightbox está abierto, para que no se pueda seguir scrolleando "detrás"
+  useEffect(() => {
+    if (lightboxIndex === null) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") closeLightbox();
+      else if (e.key === "ArrowLeft") showPrev();
+      else if (e.key === "ArrowRight") showNext();
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [lightboxIndex]);
 
   useGSAP(
     () => {
@@ -152,20 +224,27 @@ export function Gallery() {
     const el = scrollerRef.current;
     if (!el) return;
     killScrollTween();
-    isDraggingRef.current = true;
+    isPressingRef.current = true;
     dragStartXRef.current = e.clientX;
     dragStartScrollRef.current = el.scrollLeft;
     lastXRef.current = e.clientX;
     lastTimeRef.current = performance.now();
     velocityRef.current = 0;
-    el.setPointerCapture(e.pointerId);
+    // setPointerCapture se difiere a handlePointerMove (ver DRAG_THRESHOLD arriba)
   }
 
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!isDraggingRef.current) return;
+    if (!isPressingRef.current) return;
     const el = scrollerRef.current;
     if (!el) return;
     const delta = e.clientX - dragStartXRef.current;
+
+    if (!isDraggingRef.current) {
+      if (Math.abs(delta) < DRAG_THRESHOLD) return; // todavía podría ser solo un clic
+      isDraggingRef.current = true;
+      el.setPointerCapture(e.pointerId);
+    }
+
     el.scrollLeft = dragStartScrollRef.current - delta;
 
     // velocidad instantánea del puntero (px/ms), usada al soltar para proyectar el
@@ -182,8 +261,10 @@ export function Gallery() {
 
   function handlePointerUp(e: React.PointerEvent<HTMLDivElement>) {
     if (e.pointerType !== "mouse") return;
-    if (!isDraggingRef.current) return;
+    const wasDragging = isDraggingRef.current;
+    isPressingRef.current = false;
     isDraggingRef.current = false;
+    if (!wasDragging) return;
 
     const el = scrollerRef.current;
     if (!el) return;
@@ -208,7 +289,7 @@ export function Gallery() {
     <section
       id="galeria"
       ref={container}
-      className="relative mx-auto max-w-6xl snap-start overflow-hidden px-6 py-20 md:py-24"
+      className="relative mx-auto max-w-6xl snap-start overflow-hidden px-6 py-14 md:py-20"
     >
       <div className="text-center sm:text-left">
         <div className="overflow-hidden">
@@ -227,18 +308,50 @@ export function Gallery() {
         <button
           type="button"
           onClick={() => scrollGallery(-1)}
+          disabled={!canScrollPrev}
           aria-label="Ver fotos anteriores"
-          className="absolute left-1 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background/85 text-lg text-foreground backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:border-accent hover:text-accent active:scale-95 md:left-2"
+          className={`absolute left-1 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background/90 text-foreground shadow-md shadow-black/5 backdrop-blur-sm transition-all duration-200 md:left-2 ${
+            canScrollPrev
+              ? "hover:scale-110 hover:border-accent hover:text-accent hover:shadow-lg active:scale-95"
+              : "pointer-events-none opacity-0"
+          }`}
         >
-          ‹
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+            className="h-5 w-5"
+          >
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
         </button>
         <button
           type="button"
           onClick={() => scrollGallery(1)}
+          disabled={!canScrollNext}
           aria-label="Ver más fotos"
-          className="absolute right-1 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background/85 text-lg text-foreground backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:border-accent hover:text-accent active:scale-95 md:right-2"
+          className={`absolute right-1 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-border bg-background/90 text-foreground shadow-md shadow-black/5 backdrop-blur-sm transition-all duration-200 md:right-2 ${
+            canScrollNext
+              ? "hover:scale-110 hover:border-accent hover:text-accent hover:shadow-lg active:scale-95"
+              : "pointer-events-none opacity-0"
+          }`}
         >
-          ›
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+            className="h-5 w-5"
+          >
+            <path d="M9 18l6-6-6-6" />
+          </svg>
         </button>
 
         {/* mask-image: difumina los bordes izquierdo/derecho de la franja, así la tarjeta
@@ -254,10 +367,17 @@ export function Gallery() {
           onPointerCancel={handlePointerUp}
           className="flex cursor-grab gap-4 overflow-x-auto px-1 pb-4 [scrollbar-width:none] [-webkit-mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)] [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)] active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
         >
-          {GALERIA.map((item) => (
-            <div
+          {GALERIA.map((item, idx) => (
+            // aspect-[8/5] (no aspect-square): las fotos originales son 320x202 (~1.58:1,
+            // bastante apaisadas) — en un recuadro cuadrado object-cover recortaba ~37% del
+            // ancho de cada foto, cortando de más los costados. 8/5 (1.6:1) casi no recorta.
+            // <button> (no <div>): para que sea clicable/enfocable y abra el lightbox.
+            <button
               key={item.src}
-              className="gallery-item group relative aspect-square w-[68%] shrink-0 overflow-hidden rounded-2xl border border-border sm:w-[42%] md:w-[30%] lg:w-[22%]"
+              type="button"
+              onClick={() => setLightboxIndex(idx)}
+              aria-label={`Ver en grande: ${item.alt}`}
+              className="gallery-item group relative aspect-[8/5] w-[68%] shrink-0 cursor-zoom-in overflow-hidden rounded-2xl border border-border sm:w-[42%] md:w-[30%] lg:w-[22%]"
             >
               <Image
                 src={item.src}
@@ -266,7 +386,7 @@ export function Gallery() {
                 sizes="(min-width: 1024px) 22vw, (min-width: 768px) 30vw, (min-width: 640px) 42vw, 68vw"
                 className="pointer-events-none object-cover transition-transform duration-500 group-hover:scale-110"
               />
-            </div>
+            </button>
           ))}
         </div>
       </div>
@@ -318,6 +438,117 @@ export function Gallery() {
           ))}
         </div>
       </div>
+
+      {/* lightbox: fondo oscuro fijo (independiente del tema claro/oscuro del sitio, como
+          en cualquier lightbox moderno) con la foto en grande, flechas para navegar entre
+          todas las fotos de la galería y una X clara para cerrar. Clic fuera de la foto
+          también cierra (overlay con onClick), pero un stopPropagation en la foto y en los
+          controles evita que un clic ahí cierre por accidente. */}
+      <AnimatePresence>
+        {lightboxIndex !== null && (
+          <motion.div
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm sm:p-8"
+            onClick={closeLightbox}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                closeLightbox();
+              }}
+              aria-label="Cerrar"
+              className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white/20 active:scale-95 sm:right-6 sm:top-6"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+                className="h-5 w-5"
+              >
+                <path d="M6 6l12 12M18 6L6 18" />
+              </svg>
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                showPrev();
+              }}
+              aria-label="Foto anterior"
+              className="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white/20 active:scale-95 sm:left-6 sm:h-12 sm:w-12"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+                className="h-6 w-6"
+              >
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                showNext();
+              }}
+              aria-label="Foto siguiente"
+              className="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white/20 active:scale-95 sm:right-6 sm:h-12 sm:w-12"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+                className="h-6 w-6"
+              >
+                <path d="M9 18l6-6-6-6" />
+              </svg>
+            </button>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={lightboxIndex}
+                onClick={(e) => e.stopPropagation()}
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.96 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="relative h-[70vh] w-full max-w-4xl sm:h-[80vh]"
+              >
+                <Image
+                  src={GALERIA[lightboxIndex].src}
+                  alt={GALERIA[lightboxIndex].alt}
+                  fill
+                  sizes="100vw"
+                  className="object-contain"
+                  priority
+                />
+              </motion.div>
+            </AnimatePresence>
+
+            <p className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-white/70 sm:bottom-6">
+              {lightboxIndex + 1} / {GALERIA.length}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

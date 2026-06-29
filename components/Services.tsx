@@ -73,7 +73,7 @@ export function Services() {
     <section
       id="lineas-negocio"
       ref={container}
-      className="relative mx-auto max-w-6xl snap-start px-6 py-20 md:py-24"
+      className="relative mx-auto max-w-6xl snap-start px-6 py-14 md:py-20"
     >
       <div className="text-center">
         <div className="overflow-hidden">

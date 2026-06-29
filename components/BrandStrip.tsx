@@ -84,8 +84,14 @@ export function BrandStrip() {
   const setWidthRef = useRef(0);
   const speedRef = useRef(36); // autoplay, en px/segundo
   const isDraggingRef = useRef(false);
+  // true desde pointerdown hasta pointerup, sin importar si hubo arrastre real — separado
+  // de isDraggingRef porque el arrastre (y el setPointerCapture que lo acompaña) solo debe
+  // activarse si el puntero se movió más que DRAG_THRESHOLD; ver por qué en handlePointerMove
+  const isPressingRef = useRef(false);
   const dragStartXRef = useRef(0);
   const dragStartTrackXRef = useRef(0);
+  // px mínimos de movimiento antes de considerarlo arrastre (y no un clic normal)
+  const DRAG_THRESHOLD = 6;
 
   useGSAP(
     () => {
@@ -183,19 +189,31 @@ export function BrandStrip() {
   // overflow-x-auto nativo), este carril es un transform animado, así que aquí sí hace
   // falta capturar también el touch para poder "jalarlo" en celular.
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    isDraggingRef.current = true;
+    isPressingRef.current = true;
     dragStartXRef.current = e.clientX;
     dragStartTrackXRef.current = xRef.current;
-    e.currentTarget.setPointerCapture(e.pointerId);
+    // OJO: aquí NO se llama setPointerCapture todavía. Hacerlo de inmediato en pointerdown
+    // era el bug reportado: el navegador reasigna también el evento "click" nativo al
+    // elemento que capturó el puntero, así que un clic simple sobre un logo (sin arrastrar)
+    // nunca llegaba al <a> y el enlace jamás navegaba. Ahora la captura se activa solo si
+    // handlePointerMove detecta arrastre real (ver abajo), dejando que el clic normal pase.
   }
 
   function handlePointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!isDraggingRef.current) return;
+    if (!isPressingRef.current) return;
     const delta = e.clientX - dragStartXRef.current;
+
+    if (!isDraggingRef.current) {
+      if (Math.abs(delta) < DRAG_THRESHOLD) return; // todavía podría ser solo un clic
+      isDraggingRef.current = true;
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+
     xRef.current = dragStartTrackXRef.current + delta;
   }
 
   function handlePointerUp() {
+    isPressingRef.current = false;
     isDraggingRef.current = false;
   }
 
@@ -206,7 +224,7 @@ export function BrandStrip() {
       className="snap-start overflow-hidden bg-background text-foreground"
     >
       {/* bloque 1: cifras del negocio */}
-      <div className="mx-auto max-w-6xl px-6 py-16 md:py-20">
+      <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
         <p className="text-center text-xs font-semibold uppercase tracking-widest text-muted">
           Ferretería Los Volcanes en números
         </p>
@@ -222,7 +240,7 @@ export function BrandStrip() {
 
       {/* bloque 2: marquee de marcas, mismo fondo que el bloque de cifras de arriba —
           un borde sutil separa ambos en vez de un salto de color completo */}
-      <div className="border-t border-border py-10">
+      <div className="border-t border-border py-8">
         <p className="text-center text-xs font-semibold uppercase tracking-widest text-muted">
           Principales marcas con las que trabajamos
         </p>

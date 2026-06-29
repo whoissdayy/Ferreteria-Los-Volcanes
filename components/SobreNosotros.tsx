@@ -51,7 +51,7 @@ export function SobreNosotros() {
     <section
       id="sobre-nosotros"
       ref={container}
-      className="relative mx-auto max-w-6xl snap-start px-6 py-20 md:py-24"
+      className="relative mx-auto max-w-6xl snap-start px-6 py-14 md:py-20"
     >
       <div className="grid gap-10 md:grid-cols-2 md:items-stretch md:gap-16">
         <div className="sobre-col overflow-hidden rounded-2xl border-4 border-accent md:h-full">

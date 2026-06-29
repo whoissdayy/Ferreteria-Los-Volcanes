@@ -90,7 +90,7 @@ export function PromoGrid() {
     <section
       id="promesa"
       ref={container}
-      className="relative mx-auto max-w-6xl snap-start px-6 py-20 md:py-24"
+      className="relative mx-auto max-w-6xl snap-start px-6 py-14 md:py-20"
     >
       <div className="overflow-hidden text-center">
         <h2 className="heading-reveal text-2xl font-bold text-foreground md:text-3xl">
