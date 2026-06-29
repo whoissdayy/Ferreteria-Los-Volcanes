@@ -354,40 +354,46 @@ export function Gallery() {
           </svg>
         </button>
 
-        {/* mask-image: difumina los bordes izquierdo/derecho de la franja, así la tarjeta
-            que queda parcialmente visible al borde se ve "desvanecida a propósito" en vez
-            de cortada a la mitad. Sin scroll-snap: el snap nativo del navegador competía con
-            las animaciones de scrollLeft de GSAP (flechas e inercia), lo que se sentía como
-            un "tirón" al final de cada movimiento — quitarlo es lo que vuelve el scroll fluido. */}
-        <div
-          ref={scrollerRef}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
-          className="flex cursor-grab gap-4 overflow-x-auto px-1 pb-4 [scrollbar-width:none] [-webkit-mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)] [mask-image:linear-gradient(to_right,transparent,black_5%,black_95%,transparent)] active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
-        >
-          {GALERIA.map((item, idx) => (
-            // aspect-[8/5] (no aspect-square): las fotos originales son 320x202 (~1.58:1,
-            // bastante apaisadas) — en un recuadro cuadrado object-cover recortaba ~37% del
-            // ancho de cada foto, cortando de más los costados. 8/5 (1.6:1) casi no recorta.
-            // <button> (no <div>): para que sea clicable/enfocable y abra el lightbox.
-            <button
-              key={item.src}
-              type="button"
-              onClick={() => setLightboxIndex(idx)}
-              aria-label={`Ver en grande: ${item.alt}`}
-              className="gallery-item group relative aspect-[8/5] w-[68%] shrink-0 cursor-zoom-in overflow-hidden rounded-2xl border border-border sm:w-[42%] md:w-[30%] lg:w-[22%]"
-            >
-              <Image
-                src={item.src}
-                alt={item.alt}
-                fill
-                sizes="(min-width: 1024px) 22vw, (min-width: 768px) 30vw, (min-width: 640px) 42vw, 68vw"
-                className="pointer-events-none object-cover transition-transform duration-500 group-hover:scale-110"
-              />
-            </button>
-          ))}
+        {/* overflow-hidden aquí (no solo en el scroller interno): sin esto, aunque el
+            scroller recortara su contenido, un eventual sub-pixel de la siguiente tarjeta
+            podía colarse justo en el borde. Quitado el mask-image de difuminado: se veía
+            como una sombra/recorte raro sobre las fotos de los costados, en vez de un
+            desvanecido sutil — mejor mostrar las tarjetas completas y nítidas. */}
+        <div className="overflow-hidden">
+          <div
+            ref={scrollerRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            className="flex cursor-grab gap-4 overflow-x-auto px-1 pb-4 [scrollbar-width:none] active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+          >
+            {GALERIA.map((item, idx) => (
+              // Los anchos por breakpoint son calc() exactos (100% del ancho disponible
+              // entre N tarjetas + sus gaps), no porcentajes redondeados — así siempre se ve
+              // un número entero de tarjetas completas (1 en celular, 2 en sm, 3 en md, 4 en
+              // lg) y nunca una quinta tarjeta a medias cortada en el borde derecho.
+              // aspect-[8/5] (no aspect-square): las fotos originales son 320x202 (~1.58:1,
+              // bastante apaisadas) — en un recuadro cuadrado object-cover recortaba ~37% del
+              // ancho de cada foto, cortando de más los costados. 8/5 (1.6:1) casi no recorta.
+              // <button> (no <div>): para que sea clicable/enfocable y abra el lightbox.
+              <button
+                key={item.src}
+                type="button"
+                onClick={() => setLightboxIndex(idx)}
+                aria-label={`Ver en grande: ${item.alt}`}
+                className="gallery-item group relative aspect-[8/5] w-full shrink-0 cursor-zoom-in overflow-hidden rounded-2xl border border-border sm:w-[calc((100%_-_1rem)/2)] md:w-[calc((100%_-_2rem)/3)] lg:w-[calc((100%_-_3rem)/4)]"
+              >
+                <Image
+                  src={item.src}
+                  alt={item.alt}
+                  fill
+                  sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, (min-width: 640px) 50vw, 100vw"
+                  className="pointer-events-none object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -522,6 +528,14 @@ export function Gallery() {
               </svg>
             </button>
 
+            {/* sin "fill": con fill, el contenedor de la foto se forzaba a un tamaño fijo
+                (h-[70vh] w-full) mas grande que la imagen real ya recortada por su relacion
+                de aspecto, asi que quedaban franjas oscuras (letterbox) que visualmente se
+                veian como "fuera de la foto" pero que en realidad seguian dentro de este div
+                con stopPropagation -- por eso en celular habia que tocar bien afuera del todo
+                (o el tache) para cerrar. Con ancho/alto intrinsecos + w-auto h-auto, la propia
+                imagen mide justo lo que ocupa la foto visible, asi que ahora "afuera de la
+                foto" es realmente afuera de este contenedor y si cierra el lightbox. */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={lightboxIndex}
@@ -530,14 +544,15 @@ export function Gallery() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="relative h-[70vh] w-full max-w-4xl sm:h-[80vh]"
+                className="relative"
               >
                 <Image
                   src={GALERIA[lightboxIndex].src}
                   alt={GALERIA[lightboxIndex].alt}
-                  fill
-                  sizes="100vw"
-                  className="object-contain"
+                  width={1280}
+                  height={808}
+                  sizes="90vw"
+                  className="h-auto max-h-[80vh] w-auto max-w-[90vw] rounded-lg object-contain"
                   priority
                 />
               </motion.div>
