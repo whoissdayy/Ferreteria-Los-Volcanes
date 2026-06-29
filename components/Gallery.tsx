@@ -460,6 +460,10 @@ export function Gallery() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25, ease: "easeOut" }}
           >
+            {/* bg-black/60 (no bg-white/10): un círculo casi blanco translúcido se perdía
+                contra fondos claros de la propia foto. Negro semitransparente + anillo blanco
+                sutil + sombra se nota igual encima de una foto clara u oscura, porque no
+                depende de "restar" o "sumar" luz al fondo sino de su propio contraste fijo. */}
             <button
               type="button"
               onClick={(e) => {
@@ -467,7 +471,7 @@ export function Gallery() {
                 closeLightbox();
               }}
               aria-label="Cerrar"
-              className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white/20 active:scale-95 sm:right-6 sm:top-6"
+              className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-black/60 text-white shadow-lg shadow-black/40 ring-1 ring-white/25 backdrop-blur-md transition-all duration-200 hover:scale-110 hover:bg-black/80 active:scale-95 sm:right-6 sm:top-6"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -490,7 +494,7 @@ export function Gallery() {
                 showPrev();
               }}
               aria-label="Foto anterior"
-              className="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white/20 active:scale-95 sm:left-6 sm:h-12 sm:w-12"
+              className="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white shadow-lg shadow-black/40 ring-1 ring-white/25 backdrop-blur-md transition-all duration-200 hover:scale-110 hover:bg-black/80 active:scale-95 sm:left-6 sm:h-12 sm:w-12"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -512,7 +516,7 @@ export function Gallery() {
                 showNext();
               }}
               aria-label="Foto siguiente"
-              className="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white backdrop-blur-sm transition-all duration-200 hover:scale-110 hover:bg-white/20 active:scale-95 sm:right-6 sm:h-12 sm:w-12"
+              className="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-white shadow-lg shadow-black/40 ring-1 ring-white/25 backdrop-blur-md transition-all duration-200 hover:scale-110 hover:bg-black/80 active:scale-95 sm:right-6 sm:h-12 sm:w-12"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -528,14 +532,15 @@ export function Gallery() {
               </svg>
             </button>
 
-            {/* sin "fill": con fill, el contenedor de la foto se forzaba a un tamaño fijo
-                (h-[70vh] w-full) mas grande que la imagen real ya recortada por su relacion
-                de aspecto, asi que quedaban franjas oscuras (letterbox) que visualmente se
-                veian como "fuera de la foto" pero que en realidad seguian dentro de este div
-                con stopPropagation -- por eso en celular habia que tocar bien afuera del todo
-                (o el tache) para cerrar. Con ancho/alto intrinsecos + w-auto h-auto, la propia
-                imagen mide justo lo que ocupa la foto visible, asi que ahora "afuera de la
-                foto" es realmente afuera de este contenedor y si cierra el lightbox. */}
+            {/* El contenedor usa aspect-[8/5] (la proporción real de las fotos, 320x202) con
+                un ancho calculado por min(): así su tamaño SIEMPRE coincide exacto con el de
+                la foto visible, sin sobrar espacio "vacío" alrededor que antes se confundía
+                con estar afuera de la imagen (y por eso un toque ahí no cerraba en celular).
+                128vh = 80vh * 8/5: si el límite que manda es la altura, el resultado nunca
+                pasa de 80vh; si manda el ancho (92vw o 720px), la altura queda por debajo de
+                eso sola, gracias a aspect-[8/5]. 720px tope en pantallas grandes para no
+                estirar de más unas fotos que de origen son chicas (320x202) y se pixelan si
+                se agrandan demasiado; 92vw para que en celular sí se sienta "grande". */}
             <AnimatePresence mode="wait">
               <motion.div
                 key={lightboxIndex}
@@ -544,15 +549,14 @@ export function Gallery() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.96 }}
                 transition={{ duration: 0.2, ease: "easeOut" }}
-                className="relative"
+                className="relative aspect-[8/5] w-[min(92vw,720px,128vh)] overflow-hidden rounded-lg"
               >
                 <Image
                   src={GALERIA[lightboxIndex].src}
                   alt={GALERIA[lightboxIndex].alt}
-                  width={1280}
-                  height={808}
-                  sizes="90vw"
-                  className="h-auto max-h-[80vh] w-auto max-w-[90vw] rounded-lg object-contain"
+                  fill
+                  sizes="(min-width: 768px) 720px, 92vw"
+                  className="object-contain"
                   priority
                 />
               </motion.div>
